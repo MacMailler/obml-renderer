@@ -25,6 +25,7 @@ namespace obml_renderer {
 		void show(const sf::Vector2f& position, const sf::Vector2f& size, link* region = nullptr);
 		void move(float x, float y);
 		void hide();
+		link* get_region();
 	};
 
 	struct scroll_info {
@@ -48,8 +49,11 @@ namespace obml_renderer {
 		scroll_info _scroll;
 		selector _selector;
 
+		bool show_page_info = false;
+
 		void setup_imgui();
 		void draw_main_bar();
+		void draw_info();
 		void draw_tabs();
 
 		void set_scroll_page_y(float amount, float factor = 64.f);

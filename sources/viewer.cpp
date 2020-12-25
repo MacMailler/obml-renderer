@@ -28,11 +28,12 @@ namespace obml_renderer {
 		style.FrameRounding = 4.f;
 
 		io.FontDefault = io.Fonts->AddFontFromFileTTF(
-			"C:\\Windows\\Fonts\\DejaVuSansMono_0.ttf", 15.f, NULL,
+			"C:\\Windows\\Fonts\\DejaVuSansMono_0.ttf", 14.6f, NULL,
 			io.Fonts->GetGlyphRangesCyrillic()
 		);
 
 		ImGui::SFML::UpdateFontTexture();
+		ImGui::StyleColorsLight();
 	}
 
 	void viewer::open() {
@@ -107,6 +108,7 @@ namespace obml_renderer {
 			ImGui::SFML::Update(_window, _clock.restart());
 
 			draw_main_bar();
+			draw_info();
 			//draw_tabs();
 
 			if (_page != nullptr) {
@@ -124,28 +126,51 @@ namespace obml_renderer {
 
 	void viewer::draw_main_bar() {
 		if (ImGui::BeginMainMenuBar()) {
-			if (ImGui::BeginMenu("OBML Renderer 0.1")) {
-				if (ImGui::MenuItem("Open", "Ctrl+O")) {
+			/*if (ImGui::BeginMenu("OBML Renderer 0.1")) {
+				ImGui::EndMenu();
+			}*/
+
+			ImGui::Text("OBML Renderer");
+
+			ImGui::Separator();
+
+			if (ImGui::MenuItem("Open")) {
 #ifdef _WIN32
-					if (GetOpenFileNameW(&_ofn) == TRUE) {
-						if (_page != nullptr)
-							_page.reset();
+				if (GetOpenFileNameW(&_ofn) == TRUE) {
+					if (_page != nullptr)
+						_page.reset();
 
-						path temp(_path);
-						std::cout << "Loading page from '" << temp.stem().u8string() << "'..." << std::endl;
+					path temp(_path);
+					std::cout << "Loading page from '" << temp.stem().u8string() << "'..." << std::endl;
 
-						_page = std::make_unique<page>(temp);
+					_page = std::make_unique<page>(temp);
 
-						_page->set_fonts(_fonts);
-						_page->prepare();
+					_page->set_fonts(_fonts);
+					_page->prepare();
+					_page->render();
 
-						_selector.hide();
-						reset_scroll();
-					}
+					_selector.hide();
+					reset_scroll();
+				}
 #endif
+			}
+
+			if (ImGui::BeginMenu("Page", _page != nullptr)) {
+				if (ImGui::MenuItem("Info", 0, show_page_info))
+					show_page_info = !show_page_info;
+
+				if (ImGui::BeginMenu("Save as...")) {
+
+					if (ImGui::MenuItem("JPEG"))
+						_page->export_page("", "jpeg");
+
+					if (ImGui::MenuItem("PNG"))
+						_page->export_page("", "png");
+
+					ImGui::EndMenu();
 				}
 
-				if (ImGui::BeginMenu("Fonts")) {
+				if (ImGui::BeginMenu("Fonts", _page != nullptr)) {
 					ImGui::InputInt("medium", reinterpret_cast<int*>(&_fonts->font_sizes[2].size));
 					ImGui::InputInt("medium bold", reinterpret_cast<int*>(&_fonts->font_sizes[3].size));
 					ImGui::InputInt("large", reinterpret_cast<int*>(&_fonts->font_sizes[4].size));
@@ -153,22 +178,20 @@ namespace obml_renderer {
 					ImGui::InputInt("small", reinterpret_cast<int*>(&_fonts->font_sizes[6].size));
 
 					if (ImGui::Button("APPLY"))
-						if (_page != nullptr)
-							_page->update_fonts();
+						_page->update_fonts();
 
 					ImGui::EndMenu();
 				}
 
-				ImGui::Separator();
-				if (ImGui::MenuItem("Quit", "Alt+F4"))
-					_window.close();
-
 				ImGui::EndMenu();
 			}
 
-			ImGui::EndMainMenuBar();
-			
+			ImGui::Separator();
+			if (ImGui::MenuItem("Quit", ""))
+				_window.close();
 		}
+
+		ImGui::EndMainMenuBar();
 	}
 
 	void viewer::draw_tabs() {
@@ -211,6 +234,84 @@ namespace obml_renderer {
 		}
 	}
 
+	void viewer::draw_info() {
+		if (!show_page_info)
+			return;
+
+		const ImGuiContext& ctx = *ImGui::GetCurrentContext();
+		float h = ctx.NextWindowData.MenuBarOffsetMinVal.y + ctx.FontBaseSize + ctx.Style.FramePadding.y; // main menu bar height
+
+		static const ImGuiWindowFlags flags{
+			ImGuiWindowFlags_AlwaysAutoResize
+			| ImGuiWindowFlags_NoResize
+//			| ImGuiWindowFlags_NoCollapse
+			| ImGuiWindowFlags_NoSavedSettings
+		};
+
+		const float dist = 12.f;
+		static int corner = 1;
+
+		if (corner != -1) {
+			ImVec2 window_pos = ImVec2((corner & 1) ? ctx.IO.DisplaySize.x - dist : dist, ((corner & 2) ? ctx.IO.DisplaySize.y - dist : dist) + h);
+			ImVec2 window_pos_pivot = ImVec2((corner & 1) ? 1.0f : 0.0f, (corner & 2) ? 1.0f : 0.0f);
+			ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
+		}
+
+		if (ImGui::Begin("Page Info", &show_page_info, flags)) {
+			const header& _header = _page->get_header();
+			link* _region = _selector.get_region();
+
+			ImGui::Text("HEADER");
+			ImGui::Separator();
+			ImGui::BulletText("Size: %dKB", _header.data_len / 1024);
+			ImGui::BulletText("Version: %d", _header.version);
+			ImGui::BulletText("Resolution: %dx%d", _header.size.x, _header.size.y);
+			ImGui::Bullet();
+			ImGui::TextWrapped("Title: %s", _header.title.c_str());
+
+			ImGui::BulletText("URL");
+			ImGui::SameLine();
+			ImGui::InputText("",
+				const_cast<char*>(_header.base_url.c_str()),
+				_header.base_url.size() + 1,
+				ImGuiInputTextFlags_AutoSelectAll
+				| ImGuiInputTextFlags_ReadOnly
+			);
+			ImGui::SameLine();
+			if (ImGui::Button("COPY")) {
+				ImGui::LogToClipboard();
+				ImGui::LogText(_header.base_url.c_str());
+				ImGui::LogFinish();
+			}
+
+			ImGui::Text(" ");
+			ImGui::Text("SELECTED REGION");
+			ImGui::Separator();
+			if (_region != nullptr) {
+				ImGui::BulletText(
+					"Dimension: %.0fx%.0f, %.0fx%.0f",
+					_region->regions.front().top, _region->regions.front().left,
+					_region->regions.front().width, _region->regions.front().height
+				);
+				ImGui::BulletText("Type: %s", _region->target.type.c_str());
+
+				ImGui::BulletText("Target:"); ImGui::SameLine();
+				ImGui::InputText("##target",
+					_region->target.href.data(),
+					_region->target.href.size() + 1,
+					ImGuiInputTextFlags_AutoSelectAll
+					| ImGuiInputTextFlags_ReadOnly
+				);
+
+				if (ImGui::Button("EXPORT"))
+					_page->export_region("", _region->regions.front());
+			}
+			else
+				ImGui::Text("EMPTY");
+		}
+		ImGui::End();
+	}
+
 	void viewer::set_scroll_page_y(float amount, float factor) {
 		sf::Vector2f size = _view.getSize();
 		float step = amount * factor;
@@ -245,7 +346,7 @@ namespace obml_renderer {
 		_scroll.position = { 0, 0 };
 
 		_view.reset({
-			_scroll.position.x, -_scroll.position.y,
+			_scroll.position.x, _scroll.position.y,
 			size.x, size.y
 		});
 	}
@@ -293,5 +394,10 @@ namespace obml_renderer {
 
 	void selector::hide() {
 		has_show = false;
+		region = nullptr;
+	}
+
+	link* selector::get_region() {
+		return region;
 	}
 };

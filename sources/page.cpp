@@ -110,7 +110,7 @@ namespace obml_renderer {
 				}
 
 #if defined __DebugVerbose__
-				std::wcout << std::endl << std::endl;
+				std::cout << std::endl << std::endl;
 #endif
 				_data.tiles.push_back(rect);
 			}
@@ -156,7 +156,7 @@ namespace obml_renderer {
 			}
 		}
 #if defined __Debug__
-		std::wcout << "\n";
+		std::cout << "\n";
 #endif
 	}
 
@@ -166,7 +166,6 @@ namespace obml_renderer {
 			std::min(
 				sf::Uint32(_header.size.y),
 				sf::Texture::getMaximumSize()
-
 			)
 		);
 
@@ -182,7 +181,7 @@ namespace obml_renderer {
 	}
 
 	void page::render(sf::RenderTarget& target) {
-		target.clear();
+		target.clear(sf::Color::White);
 
 		for (auto i : _data.tiles)
 			target.draw(i);
@@ -255,7 +254,7 @@ namespace obml_renderer {
 		return image.saveToFile(ss.str());
 	}
 
-	bool page::export_region(const fs::path& dest, const sf::FloatRect& region, const char* format) const {
+	bool page::export_region(const path& dest, const sf::FloatRect& region, const char* format) const {
 		sf::IntRect r{ region };
 
 		sf::Sprite t{ _data.rt.getTexture(), r };
@@ -271,7 +270,13 @@ namespace obml_renderer {
 		uint32_t checksum = 0;//crc32::update(crc32_table, 0, image.getPixelsPtr(), (rt.getSize().x * rt.getSize().y) * 4);
 
 		std::stringstream ss;
-		ss << dest.string() << _path.stem().u8string() << "_" << std::hex << checksum << "." << format;
+		ss
+			<< dest.string()
+			<< _path.stem().u8string()
+			<< "_" << region.left << "x" << region.top
+			<< "_" << region.width << "x" << region.height
+			<< "." << format
+		;
 
 #if defined __Debug__
 		std::cout << "Exporting region to '" << ss.str() << "'" << std::endl;
@@ -286,7 +291,7 @@ namespace obml_renderer {
 		for (const auto& i : _images) {
 			fmt.clear();
 
-			fmt << dest << "File" << count++ << ".jpeg";
+			fmt << dest << "File" << count++ << ".png";
 
 			i.second->copyToImage().saveToFile(fmt.str());
 		}
