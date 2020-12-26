@@ -49,6 +49,8 @@ namespace obml_renderer {
 		scroll_info _scroll;
 		selector _selector;
 
+		sf::Vector2f _drawing_offset = { 0.f, 0.f };
+
 		bool show_page_info = false;
 
 		void setup_imgui();

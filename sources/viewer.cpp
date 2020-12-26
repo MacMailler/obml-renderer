@@ -22,22 +22,32 @@ namespace obml_renderer {
 	void viewer::setup_imgui() {
 		ImGui::SFML::Init(_window);
 
+		ImGui::StyleColorsLight();
+		ImGui::GetStyle().FrameRounding = 4.f;
+
 		ImGuiIO& io = ImGui::GetIO();
-		ImGuiStyle& style = ImGui::GetStyle();
-
-		style.FrameRounding = 4.f;
-
 		io.FontDefault = io.Fonts->AddFontFromFileTTF(
 			"C:\\Windows\\Fonts\\DejaVuSansMono_0.ttf", 14.6f, NULL,
 			io.Fonts->GetGlyphRangesCyrillic()
 		);
 
 		ImGui::SFML::UpdateFontTexture();
-		ImGui::StyleColorsLight();
 	}
 
 	void viewer::open() {
 		_fonts->font.loadFromFile("C:\\Windows\\Fonts\\ARIALUNI.ttf");
+
+		sf::Event e;
+		sf::Clock _clock;
+		ImGui::SFML::Update(_window, _clock.restart());
+
+		ImGuiContext& g = *ImGui::GetCurrentContext();
+		_drawing_offset.y = std::max(g.Style.DisplaySafeAreaPadding.y - g.Style.FramePadding.y, 0.0f) + g.FontBaseSize + g.Style.FramePadding.y;
+
+		_view.setViewport({
+			_drawing_offset.x, _drawing_offset.y / _window.getSize().y,
+			1.f, 1.f
+		});
 
 		_view.reset({
 			0.f, 0.f,
@@ -45,19 +55,30 @@ namespace obml_renderer {
 			static_cast<float>(_window.getSize().y)
 		});
 
-		sf::Event e;
-		sf::Clock _clock;
+		sf::RectangleShape _window_border({ (float)_window.getSize().x - 2, (float)_window.getSize().y - 2 });
+		_window_border.setPosition(1, 1);
+		_window_border.setFillColor(sf::Color::Transparent);
+		_window_border.setOutlineColor({155,155,155,255});
+		_window_border.setOutlineThickness(1.f);
+
 		while (_window.isOpen()) {
 			ImGui::SFML::ProcessEvent(e);
 			while (_window.pollEvent(e)) {
 				if (e.type == sf::Event::Closed)
 					_window.close();
 
-				else if (e.type == sf::Event::Resized)
+				else if (e.type == sf::Event::Resized) {
+					const_cast<sf::View&>(_window.getDefaultView()).reset({
+						0.f, 0.f,
+						float(e.size.width), float(e.size.height)
+					});
 					_view.reset({
 						_scroll.position.x, -_scroll.position.y,
 						float(e.size.width), float(e.size.height)
 					});
+
+					_window_border.setSize({ float(e.size.width) - 2, float(e.size.height) - 2});
+				}
 
 				else if (e.type == sf::Event::KeyPressed) {
 					switch (e.key.code) {
@@ -87,7 +108,7 @@ namespace obml_renderer {
 									for (const auto& j : i.regions) {
 										if (j.contains((float)e.mouseButton.x, e.mouseButton.y - _scroll.position.y)) {
 											_selector.show(
-												{ j.left, j.top + _scroll.position.y },
+												{ j.left, j.top + _scroll.position.y + _drawing_offset.y },
 												{ j.width, j.height },
 												&i
 											);
@@ -118,6 +139,7 @@ namespace obml_renderer {
 			}
 
 			_window.draw(_selector);
+			_window.draw(_window_border);
 
 			ImGui::SFML::Render(_window);
 			_window.display();
@@ -313,21 +335,26 @@ namespace obml_renderer {
 	}
 
 	void viewer::set_scroll_page_y(float amount, float factor) {
+		if (_page == nullptr)
+			return;
+
 		sf::Vector2f size = _view.getSize();
+		float page_height = _page->get_header().size.y;
+
 		float step = amount * factor;
-		float max_step = -(_page->get_header().size.y - size.y);
+		float max_step = -(page_height - size.y);
 
 		float after_step = _scroll.position.y + step;
 
 		if (amount > 0 && after_step > 0.f)
-			if (_scroll.position.y < 0)
+			if (_scroll.position.y < 0.f)
 				step = -_scroll.position.y;
 			else
 				step = 0.f;
 
 		else if (after_step < max_step)
-			if (size.y > _window.getSize().y)
-				step = max_step - _scroll.position.y;
+			if (page_height > size.y)
+				step = max_step - _scroll.position.y - _drawing_offset.y;
 			else
 				step = 0.f;
 
