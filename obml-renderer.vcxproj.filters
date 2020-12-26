@@ -55,5 +55,9 @@
       <Filter>ImGui</Filter>
     </ClInclude>
     <ClInclude Include="sources\viewer.hpp" />
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="obml-renderer.rc" />
   </ItemGroup>
 </Project>

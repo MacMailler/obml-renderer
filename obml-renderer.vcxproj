@@ -145,6 +145,7 @@
     <ClCompile Include="sources\viewer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="resource.h" />
     <ClInclude Include="sources\entity.hpp" />
     <ClInclude Include="sources\imgui\imconfig.h" />
     <ClInclude Include="sources\imgui\imgui-SFML.h" />
@@ -159,6 +160,9 @@
     <ClInclude Include="sources\reader.hpp" />
     <ClInclude Include="sources\main.hpp" />
     <ClInclude Include="sources\viewer.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="obml-renderer.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
