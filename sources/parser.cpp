@@ -103,12 +103,11 @@ namespace obml_renderer {
 		while (_reader.tell() < _links_end) {
 			int8_t type = _reader.read_byte();
 			switch (type) {
-			case '\0': {
-				//std::cout << "[\\0]=" << _file.tell() << std::endl;
-
+			case '\0': { // data for drop-down lists (strings)
 				_reader.skip(1);
 				for (int8_t i = 0, len = _reader.read_byte(); i < len; i++) {
-					_reader.skip(3);
+					auto bytes = _reader.read_short();
+					_reader.skip(bytes);
 					_reader.skip_blob();
 				}
 			}
