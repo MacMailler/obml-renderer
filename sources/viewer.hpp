@@ -62,7 +62,7 @@ namespace obml_renderer {
 		void reset_scroll();
 
 #ifdef _WIN32
-		OPENFILENAMEW _ofn;
+		OPENFILENAME _ofn;
 		std::wstring _path;
 		void setup_openfilename();
 #endif

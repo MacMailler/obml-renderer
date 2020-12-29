@@ -9,6 +9,8 @@ namespace obml_renderer {
 		_window.setVerticalSyncEnabled(true);
 		setup_imgui();
 
+		_fonts->font.loadFromFile("C:\\Windows\\Fonts\\ARIALUNI.ttf");
+
 #ifdef _WIN32
 		setup_openfilename();
 #endif
@@ -27,7 +29,7 @@ namespace obml_renderer {
 
 		ImGuiIO& io = ImGui::GetIO();
 		io.FontDefault = io.Fonts->AddFontFromFileTTF(
-			"C:\\Windows\\Fonts\\DejaVuSansMono_0.ttf", 14.6f, NULL,
+			"C:\\Windows\\Fonts\\DejaVuSansMono_0.ttf", 14.f, NULL,
 			io.Fonts->GetGlyphRangesCyrillic()
 		);
 
@@ -35,8 +37,6 @@ namespace obml_renderer {
 	}
 
 	void viewer::open() {
-		_fonts->font.loadFromFile("C:\\Windows\\Fonts\\ARIALUNI.ttf");
-
 		sf::Event e;
 		sf::Clock _clock;
 		ImGui::SFML::Update(_window, _clock.restart());
@@ -60,6 +60,13 @@ namespace obml_renderer {
 		_window_border.setFillColor(sf::Color::Transparent);
 		_window_border.setOutlineColor({155,155,155,255});
 		_window_border.setOutlineThickness(1.f);
+
+		bool _grabbed = false;
+		sf::Vector2i _grabbed_offset{ 0, 0 };
+
+		static const sf::FloatRect _menu_bar_bounds{
+			0.f, 0.f, float(_window.getSize().x), _drawing_offset.y
+		};
 
 		while (_window.isOpen()) {
 			ImGui::SFML::ProcessEvent(e);
@@ -121,6 +128,24 @@ namespace obml_renderer {
 								_selector.hide();
 						}
 					}
+					else if (e.mouseButton.button == sf::Mouse::Button::Right) {
+						_grabbed = false;
+					}
+				}
+
+				else if (e.type == sf::Event::MouseButtonPressed) {
+					if (e.mouseButton.button == sf::Mouse::Button::Right) {
+						if (_menu_bar_bounds.contains(e.mouseButton.x, e.mouseButton.y)) {
+							_grabbed = true;
+							_grabbed_offset.x = e.mouseButton.x;
+							_grabbed_offset.y = e.mouseButton.y;
+						}
+					}
+				}
+
+				else if (e.type == sf::Event::MouseMoved) {
+					if (_grabbed)
+						_window.setPosition(sf::Mouse::getPosition() - _grabbed_offset);
 				}
 			}
 
@@ -148,17 +173,13 @@ namespace obml_renderer {
 
 	void viewer::draw_main_bar() {
 		if (ImGui::BeginMainMenuBar()) {
-			/*if (ImGui::BeginMenu("OBML Renderer 0.1")) {
-				ImGui::EndMenu();
-			}*/
-
 			ImGui::Text("OBML Renderer");
 
 			ImGui::Separator();
 
 			if (ImGui::MenuItem("Open")) {
 #ifdef _WIN32
-				if (GetOpenFileNameW(&_ofn) == TRUE) {
+				if (GetOpenFileName(&_ofn) == TRUE) {
 					if (_page != nullptr)
 						_page.reset();
 
@@ -193,11 +214,11 @@ namespace obml_renderer {
 				}
 
 				if (ImGui::BeginMenu("Fonts", _page != nullptr)) {
-					ImGui::InputInt("medium", reinterpret_cast<int*>(&_fonts->font_sizes[2].size));
-					ImGui::InputInt("medium bold", reinterpret_cast<int*>(&_fonts->font_sizes[3].size));
-					ImGui::InputInt("large", reinterpret_cast<int*>(&_fonts->font_sizes[4].size));
-					ImGui::InputInt("large bold", reinterpret_cast<int*>(&_fonts->font_sizes[5].size));
-					ImGui::InputInt("small", reinterpret_cast<int*>(&_fonts->font_sizes[6].size));
+					ImGui::SliderInt("medium", reinterpret_cast<int*>(&_fonts->font_sizes[2].size), 1, 32);
+					ImGui::SliderInt("medium bold", reinterpret_cast<int*>(&_fonts->font_sizes[3].size), 1, 32);
+					ImGui::SliderInt("large", reinterpret_cast<int*>(&_fonts->font_sizes[4].size), 1, 32);
+					ImGui::SliderInt("large bold", reinterpret_cast<int*>(&_fonts->font_sizes[5].size), 1, 32);
+					ImGui::SliderInt("small", reinterpret_cast<int*>(&_fonts->font_sizes[6].size), 1, 32);
 
 					if (ImGui::Button("APPLY"))
 						_page->update_fonts();
