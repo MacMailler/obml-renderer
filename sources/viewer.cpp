@@ -39,7 +39,6 @@ namespace obml_renderer {
 	void viewer::open() {
 		sf::Event e;
 		sf::Clock _clock;
-		ImGui::SFML::Update(_window, _clock.restart());
 
 		ImGuiContext& g = *ImGui::GetCurrentContext();
 		_drawing_offset.y = std::max(g.Style.DisplaySafeAreaPadding.y - g.Style.FramePadding.y, 0.0f) + g.FontBaseSize + g.Style.FramePadding.y;
@@ -69,8 +68,12 @@ namespace obml_renderer {
 		};
 
 		while (_window.isOpen()) {
-			ImGui::SFML::ProcessEvent(e);
+
+			ImGui::SFML::Update(_window, _clock.restart());
+
 			while (_window.pollEvent(e)) {
+				ImGui::SFML::ProcessEvent(e);
+
 				if (e.type == sf::Event::Closed)
 					_window.close();
 
@@ -150,8 +153,6 @@ namespace obml_renderer {
 			}
 
 			_window.clear(sf::Color::White);
-
-			ImGui::SFML::Update(_window, _clock.restart());
 
 			draw_main_bar();
 			draw_info();
